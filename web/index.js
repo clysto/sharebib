@@ -8,11 +8,12 @@ async function bibSearch(query) {
       body: query,
     });
     if (!response.ok) {
-      throw new Error('HTTP error ' + response.status);
+      return [];
     }
+    // return response.json().filter((item) => item.data.itemType !== 'note');
     return response.json();
   } catch (error) {
-    console.error(error);
+    return [];
   }
 }
 
@@ -24,7 +25,7 @@ async function bibSpaceFetch(id) {
     }
     return response.json();
   } catch (error) {
-    console.error(error);
+    throw error;
   }
 }
 
@@ -38,7 +39,7 @@ async function bibSpaceCreate() {
     }
     return response.json();
   } catch (error) {
-    console.error(error);
+    throw error;
   }
 }
 
@@ -56,7 +57,7 @@ async function bibSpaceSync(id, bibs) {
     }
     return response.json();
   } catch (error) {
-    console.error(error);
+    throw error;
   }
 }
 

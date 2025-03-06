@@ -160,59 +160,96 @@ function App() {
   let editItem = null;
   let searchInput = null;
   let searching = false;
-  const bibs = [];
+  let searchResults = []; // 存储搜索结果
+  let bibs = [];
+  let searchModal = null; // 控制模态框显示
+  let editorModal = null;
 
   const id = m.route.param('id');
 
-  bibSpaceFetch(id).then((data) => {
-    for (let bib of data.bibs) {
-      bibs.push(bib);
-    }
-    m.redraw();
-  });
+  // 获取已有的文献数据
+  bibSpaceFetch(id)
+    .then((data) => {
+      bibs = data.bibs;
+      const history = localStorage.getItem('history');
+      if (history) {
+        const parsedHistory = JSON.parse(history);
+        if (!parsedHistory.includes(id)) {
+          parsedHistory.push(id);
+        }
+        localStorage.setItem('history', JSON.stringify(parsedHistory));
+      } else {
+        localStorage.setItem('history', JSON.stringify([id]));
+      }
+      m.redraw();
+    })
+    .catch((error) => {
+      m.route.set('/');
+    });
 
   const handleEdit = (bib) => {
     editItem = bib;
+    editorModal.show();
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    const query = searchInput.dom.value;
+    const query = searchInput.dom.value.trim();
+    if (!query) return;
+
     searchInput.dom.value = '';
     searching = true;
+    searchResults = [];
     const result = await bibSearch(query);
     searching = false;
-    if (result.length == 1) {
-      bibs.push(result[0]);
-      m.redraw();
-      handleBibsChange();
-    }
+    searchResults = result;
+    searchModal.show();
+    m.redraw();
+  };
+
+  const handleSelectBib = (bib) => {
+    bibs.push(bib);
+    handleBibsChange();
+    searchModal.hide();
+    searchResults = [];
+    m.redraw();
   };
 
   const handleBibsChange = () => {
     bibSpaceSync(id, bibs);
+    m.redraw();
   };
 
   return {
-    view: (vnode) => {
+    oncreate: () => {
+      searchModal = new bootstrap.Modal('#search-modal');
+      editorModal = new bootstrap.Modal('#edit-modal');
+    },
+    onremove: () => {
+      searchModal.dispose();
+      editorModal.dispose();
+    },
+    view: () => {
       const zoteroSchema = window.zoteroSchema;
       const url = document.location.host;
-      return m('div', { id: 'app' }, [
+
+      return m('div.py-5', { id: 'app' }, [
         m('div.container', [
+          m('h1.text-center.py-4', 'ShareBib'),
+          // 搜索栏
           m('div.input-group.mb-2', [
             (searchInput = m('input.form-control', {
               placeholder: '输入 URL, ISBN, DOI, PMID, arXiv ID 或其他标识',
             })),
             m(
               'button.btn.btn-primary',
-              {
-                onclick: handleSearch,
-              },
-              '引用'
+              { onclick: handleSearch, disabled: searching },
+              searching ? '搜索中...' : '引用'
             ),
           ]),
 
-          m('div.input-group', [
+          // BibTeX 下载链接
+          m('div.input-group.mb-4', [
             m('span.input-group-text', 'BibTeX URL'),
             m('input.form-control.font-monospace', {
               readonly: true,
@@ -235,15 +272,13 @@ function App() {
                 m(
                   'tr',
                   {
-                    ['data-bs-toggle']: 'modal',
-                    ['data-bs-target']: '#edit-modal',
                     onclick: () => handleEdit(bib),
                   },
                   [
                     m('td', bib.title),
                     m(
                       'td',
-                      bib.creators.length > 0
+                      bib.creators && bib.creators.length > 0
                         ? bib.creators
                             .map((c) => `${c.firstName} ${c.lastName}`)
                             .join(', ')
@@ -256,19 +291,81 @@ function App() {
             ]),
           ]),
 
-          // 编辑弹窗
+          // 统一搜索和未找到的模态框
+          m(
+            'div.modal.fade',
+            {
+              id: 'search-modal',
+              tabindex: '-1',
+            },
+            m('div.modal-dialog', [
+              m('div.modal-content', [
+                m('div.modal-header', [
+                  m(
+                    'h5.modal-title',
+                    searchResults.length === 0 ? '提示' : '请选择要添加的文献'
+                  ),
+                  m('button.btn-close', {
+                    'data-bs-dismiss': 'modal',
+                    'aria-label': 'Close',
+                  }),
+                ]),
+                m(
+                  'div.modal-body',
+                  searchResults.length === 0
+                    ? m('p.text-muted', '没有找到相关文献，请检查输入是否正确')
+                    : m('ul.list-group', [
+                        ...searchResults.map((bib) =>
+                          m(
+                            'li.list-group-item.list-group-item-action',
+                            {
+                              onclick: () => handleSelectBib(bib),
+                              style: { cursor: 'pointer' },
+                            },
+                            [
+                              m('strong', bib.title),
+                              m(
+                                'span.text-muted.ms-2',
+                                bib.creators && bib.creators.length > 0
+                                  ? bib.creators
+                                      .map(
+                                        (c) => `${c.firstName} ${c.lastName}`
+                                      )
+                                      .join(', ')
+                                  : '无作者'
+                              ),
+                            ]
+                          )
+                        ),
+                      ])
+                ),
+                m('div.modal-footer', [
+                  m(
+                    'button.btn.btn-secondary',
+                    {
+                      'data-bs-dismiss': 'modal',
+                      'aria-label': 'Close',
+                    },
+                    '关闭'
+                  ),
+                ]),
+              ]),
+            ])
+          ),
+
+          // 编辑文献的模态框
           m(
             'div.modal.fade',
             {
               id: 'edit-modal',
               tabindex: '-1',
             },
-            m('div.modal-dialog', [
+            m('div.modal-dialog.modal-lg', [
               m('div.modal-content', [
                 m('div.modal-header', [
                   m('h5.modal-title', '编辑'),
                   m('button.btn-close', {
-                    ['data-bs-dismiss']: 'modal',
+                    'data-bs-dismiss': 'modal',
                     'aria-label': 'Close',
                   }),
                 ]),
@@ -296,13 +393,36 @@ function Home() {
     m.route.set(`/${space.id}`);
   };
 
+  let history = localStorage.getItem('history');
+  if (!history) {
+    localStorage.setItem('history', JSON.stringify([]));
+    history = [];
+  }
+
   return {
     view: () =>
-      m('div', [
+      m('div.container.py-5', [
+        m('h1.text-center.py-4', 'ShareBib'),
+
+        m('h3', '最近的文献列表'),
+
+        m('ul.list-group.mb-2', [
+          ...JSON.parse(history).map((id) =>
+            m(
+              'li.list-group-item.list-group-item-action.font-monospace',
+              {
+                onclick: () => m.route.set(`/${id}`),
+                style: { cursor: 'pointer' },
+              },
+              id
+            )
+          ),
+        ]),
+
         m(
-          'button.btn.btn-primary',
+          'button.btn.btn-primary.btn-lg',
           { onclick: handleCreateSpace },
-          '创建文献列表'
+          '创建新的文献列表'
         ),
       ]),
   };
