@@ -1,2 +1,4 @@
 .env
 /data.db
+/sharebib
+.DS_Store
