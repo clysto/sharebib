@@ -7,10 +7,6 @@ async function bibSearch(query) {
       method: 'POST',
       body: query,
     });
-    if (!response.ok) {
-      return [];
-    }
-    // return response.json().filter((item) => item.data.itemType !== 'note');
     return response.json();
   } catch (error) {
     return [];
@@ -83,3 +79,9 @@ function init() {
 }
 
 init();
+
+document.addEventListener('hide.bs.modal', function (event) {
+  if (document.activeElement) {
+    document.activeElement.blur();
+  }
+});

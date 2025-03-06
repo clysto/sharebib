@@ -19,6 +19,7 @@ import (
 
 var db *bbolt.DB
 var translateURL = os.Getenv("TRANSLATE_URL")
+var translatePrefix = os.Getenv("TRANSLATE_PREFIX")
 var port = os.Getenv("PORT")
 var dbPath = os.Getenv("DB_PATH")
 
@@ -87,7 +88,7 @@ func zoteroProxy(c *gin.Context) {
 		req.Host = remote.Host
 		req.URL.Scheme = remote.Scheme
 		req.URL.Host = remote.Host
-		req.URL.Path = c.Param("path")
+		req.URL.Path = translatePrefix + c.Param("path")
 	}
 
 	proxy.ServeHTTP(c.Writer, c.Request)
@@ -163,7 +164,7 @@ func getBibtex(c *gin.Context) {
 		req.Host = remote.Host
 		req.URL.Scheme = remote.Scheme
 		req.URL.Host = remote.Host
-		req.URL.Path = "/export"
+		req.URL.Path = translatePrefix + "/export"
 		req.URL.RawQuery = "format=bibtex"
 	}
 
