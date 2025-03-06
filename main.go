@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,9 @@ import (
 	"github.com/google/uuid"
 	"go.etcd.io/bbolt"
 )
+
+//go:embed web/*
+var embeddedFiles embed.FS
 
 var db *bbolt.DB
 var translateURL = os.Getenv("TRANSLATE_URL")
@@ -176,7 +180,7 @@ func main() {
 	defer closeDB() // 确保程序退出时关闭数据库
 
 	app := gin.Default()
-	app.Use(static.Serve("/", static.LocalFile("./web", false)))
+	app.Use(static.Serve("/", static.EmbedFolder(embeddedFiles, "web")))
 	app.Any("/zotero/*path", zoteroProxy)
 
 	app.POST("/space", createSpace)
