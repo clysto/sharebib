@@ -7,6 +7,9 @@ function Home() {
   let history = localStorage.getItem('history');
   try {
     history = JSON.parse(history);
+    if (!Array.isArray(history)) {
+      history = [];
+    }
   } catch (e) {
     history = [];
   }
