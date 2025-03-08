@@ -5,10 +5,10 @@ function BibEditor(vnode) {
   let itemSchema = null;
 
   const handleChange = () => {
-    const inputs = dom.dom.querySelectorAll('input');
+    const inputs = dom.dom.querySelectorAll('.form-control');
     bib.creators = [];
     inputs.forEach((input) => {
-      if (input.name !== 'creator') {
+      if (!input.name.startsWith('creator')) {
         bib[input.name] = input.value;
       }
     });
