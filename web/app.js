@@ -109,7 +109,8 @@ function App() {
       pasteBibModal = new bootstrap.Modal('#paste-bib-modal');
     },
     onremove: () => {
-      console.log(editorModal);
+      document.body.classList.remove('modal-open');
+      document.body.style = '';
       searchModal.dispose();
       editorModal.dispose();
       pasteBibModal.dispose();
