@@ -181,6 +181,7 @@ func main() {
 
 	app := gin.Default()
 	app.Use(static.Serve("/", static.EmbedFolder(embeddedFiles, "web")))
+	// app.Use(static.Serve("/", static.LocalFile("web", false)))
 	app.Any("/zotero/*path", zoteroProxy)
 
 	app.POST("/space", createSpace)

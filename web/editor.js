@@ -2,6 +2,7 @@ function BibEditor(vnode) {
   const zoteroSchema = vnode.attrs.zoteroSchema;
   let bib = vnode.attrs.bib;
   let dom = null;
+  let itemSchema = null;
 
   const handleChange = () => {
     const inputs = dom.dom.querySelectorAll('input');
@@ -13,11 +14,22 @@ function BibEditor(vnode) {
     });
     const creatorInputs = dom.dom.querySelectorAll('.creator');
     creatorInputs.forEach((input) => {
-      const [firstName, lastName] = input
-        .querySelector('input')
-        .value.split(', ');
       const creatorType = input.querySelector('select').value;
-      bib.creators.push({ firstName, lastName, creatorType });
+      const firstName = input.querySelector('input[name=creator-firstname]');
+      const lastName = input.querySelector('input[name=creator-lastname]');
+      const name = input.querySelector('input[name=creator-name]');
+      if (name) {
+        bib.creators.push({
+          name: name.value,
+          creatorType: creatorType,
+        });
+      } else {
+        bib.creators.push({
+          firstName: firstName.value,
+          lastName: lastName.value,
+          creatorType: creatorType,
+        });
+      }
     });
     if (vnode.attrs.onchange) {
       vnode.attrs.onchange(bib);
@@ -36,11 +48,36 @@ function BibEditor(vnode) {
     }
   };
 
+  const handleNameMerge = (index) => {
+    const creator = bib.creators[index];
+    if (creator.name) {
+      const [firstName, lastName] = creator.name.split(' ');
+      creator.firstName = firstName;
+      creator.lastName = lastName;
+      creator.name = undefined;
+    } else {
+      creator.name = `${creator.firstName} ${creator.lastName}`;
+      creator.firstName = undefined;
+      creator.lastName = undefined;
+    }
+    if (vnode.attrs.onchange) {
+      vnode.attrs.onchange;
+    }
+  };
+
   const handleAddCreator = (index) => {
+    defaultCreatorType = itemSchema.creatorTypes.filter(
+      (type) => type.primary
+    )[0].creatorType;
+    console.log(defaultCreatorType);
     if (!bib.creators) {
       bib.creators = [];
     }
-    bib.creators.splice(index + 1, 0, { firstName: '', lastName: '' });
+    bib.creators.splice(index + 1, 0, {
+      firstName: '',
+      lastName: '',
+      creatorType: defaultCreatorType,
+    });
     if (vnode.attrs.onchange) {
       vnode.attrs.onchange(bib);
     }
@@ -51,7 +88,7 @@ function BibEditor(vnode) {
       bib = vnode.attrs.bib;
       const itemType = vnode.attrs.bib.itemType;
       const locales = zoteroSchema.locales['zh-CN'];
-      let itemSchema = zoteroSchema.itemTypes.filter(
+      itemSchema = zoteroSchema.itemTypes.filter(
         (item) => item.itemType === itemType
       );
       if (itemSchema.length === 0) {
@@ -95,48 +132,75 @@ function BibEditor(vnode) {
             m('div.creators', [
               ...bib.creators.map((creator, index) =>
                 m(
-                  'div.input-group.mb-2',
+                  'div.d-flex.align-items-center.mb-2',
                   {
-                    class: 'creator',
                     key: `${creator.firstName}-${creator.lastName}-${creator.name}`,
                   },
                   [
                     m(
-                      'select.form-control',
+                      'div.input-group',
                       {
-                        value: creator.creatorType,
-                        onchange: handleChange,
+                        class: 'creator',
                       },
                       [
-                        ...itemSchema.creatorTypes.map((type) =>
-                          m(
-                            'option',
-                            {
-                              value: type.creatorType,
-                            },
-                            locales.creatorTypes[type.creatorType]
-                          )
+                        m(
+                          'select.form-control',
+                          {
+                            value: creator.creatorType,
+                            onchange: handleChange,
+                          },
+                          [
+                            ...itemSchema.creatorTypes.map((type) =>
+                              m(
+                                'option',
+                                {
+                                  value: type.creatorType,
+                                },
+                                locales.creatorTypes[type.creatorType]
+                              )
+                            ),
+                          ]
                         ),
+                        creator.name
+                          ? m('input.form-control', {
+                              value: creator.name,
+                              name: 'creator-name',
+                              onchange: handleChange,
+                            })
+                          : [
+                              m('input.form-control', {
+                                value: creator.firstName,
+                                name: 'creator-firstname',
+                                onchange: handleChange,
+                              }),
+                              m('input.form-control', {
+                                value: creator.lastName,
+                                name: 'creator-lastname',
+                                onchange: handleChange,
+                              }),
+                            ],
                       ]
                     ),
-                    m('input.form-control', {
-                      value: `${creator.firstName}, ${creator.lastName}`,
-                      name: 'creator',
-                      onchange: handleChange,
-                    }),
                     m(
-                      'button.btn.btn-outline-danger',
+                      'button.btn.px-1.ms-2',
+                      {
+                        onclick: () => handleNameMerge(index),
+                      },
+                      m('i.bi.bi-input-cursor')
+                    ),
+                    m(
+                      'button.btn.px-1',
                       {
                         onclick: () => handleDeleteCreator(index),
                       },
-                      '删除'
+                      m('i.bi.bi-dash-circle')
                     ),
                     m(
-                      'button.btn.btn-outline-primary',
+                      'button.btn.px-1',
                       {
                         onclick: () => handleAddCreator(index),
                       },
-                      '添加'
+                      m('i.bi.bi-plus-circle')
                     ),
                   ]
                 )
@@ -149,7 +213,7 @@ function BibEditor(vnode) {
                 {
                   onclick: () => handleAddCreator(-1),
                 },
-                '添加作者'
+                [m('i.bi.bi-person-fill-add.me-2'), '添加作者']
               ),
             ]),
           ...itemSchema.fields

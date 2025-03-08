@@ -6,6 +6,7 @@ function App() {
   let bibs = [];
   let searchModal = null;
   let editorModal = null;
+  let pasteBibModal = null;
 
   const id = m.route.param('id');
 
@@ -59,6 +60,20 @@ function App() {
     m.redraw();
   };
 
+  const handleBibPaste = () => {
+    const textarea = document.querySelector('#paste-bib-modal textarea');
+
+    const text = textarea.value;
+    if (!text) return;
+
+    bibTransform(text).then((result) => {
+      bibs.push(...result);
+      handleBibsChange();
+      textarea.value = '';
+      pasteBibModal.hide();
+    });
+  };
+
   const handleSelectBib = async (identifier) => {
     searchModal.hide();
     await handleSearch(identifier);
@@ -78,18 +93,30 @@ function App() {
     editorModal.show();
   };
 
+  const displayCreators = (creators) => {
+    if (!creators || creators.length === 0) return '无作者';
+    return `${
+      creators[0].name
+        ? creators[0].name
+        : creators[0].firstName + ' ' + creators[0].lastName
+    }${creators.length > 1 ? ' 等' : ''}`;
+  };
+
   return {
     oncreate: () => {
       searchModal = new bootstrap.Modal('#search-modal');
       editorModal = new bootstrap.Modal('#edit-modal');
+      pasteBibModal = new bootstrap.Modal('#paste-bib-modal');
     },
     onremove: () => {
       console.log(editorModal);
       searchModal.dispose();
       editorModal.dispose();
+      pasteBibModal.dispose();
     },
     view: () => {
       const zoteroSchema = window.zoteroSchema;
+      const itemNames = zoteroSchema.locales['zh-CN'].itemTypes;
       const url = document.location.host;
       const protocol = document.location.protocol;
 
@@ -109,6 +136,12 @@ function App() {
           m('div.input-group.mb-4', [
             (searchInput = m('input.form-control.form-control-lg', {
               placeholder: '输入 URL, ISBN, DOI, PMID, arXiv ID 或标题',
+              readonly: searching,
+              onkeydown: (e) => {
+                if (e.key === 'Enter') {
+                  handleSearch(searchInput.dom.value);
+                }
+              },
             })),
             m(
               'button.btn.btn-primary.btn-lg',
@@ -116,28 +149,57 @@ function App() {
                 onclick: () => handleSearch(searchInput.dom.value),
                 disabled: searching,
               },
-              searching ? '搜索中...' : '引用'
+              searching ? '搜索中...' : [m('i.bi.bi-search.me-2'), '引用']
             ),
           ]),
 
           // BibTeX 下载链接
-          m('div.input-group.mb-4', [
-            m('span.input-group-text', 'BibTeX URL'),
-            m('input.form-control.font-monospace', {
-              readonly: true,
-              value: `${protocol}//${url}/bibtex/${id}.bib`,
-            }),
+          m('div.mb-4.d-flex', [
             m(
-              'a.btn.btn-secondary',
-              { href: `/bibtex/${id}.bib`, download: `${id}.bib` },
-              '下载'
+              'div.input-group.me-2',
+              {
+                style: { width: 'auto' },
+              },
+              [
+                m('span.input-group-text', 'BibTeX'),
+                m('input.form-control.font-monospace', {
+                  readonly: true,
+                  hidden: true,
+                  value: `${protocol}//${url}/bibtex/${id}.bib`,
+                }),
+
+                m(
+                  'a.btn.btn-secondary',
+                  { href: `/bibtex/${id}.bib`, download: `${id}.bib` },
+                  [m('i.bi.bi-download')]
+                ),
+              ]
+            ),
+            m(
+              'button.btn.btn-secondary',
+              {
+                onclick: () =>
+                  navigator.clipboard.writeText(
+                    `${protocol}//${url}/bibtex/${id}.bib`
+                  ),
+              },
+              [m('i.bi.bi-copy.me-2'), '复制 BibTeX 链接']
             ),
           ]),
+
+          // 添加文献按钮
           m('div.text-center.mb-2', [
             m(
-              'button.btn.btn-secondary.btn-lg',
+              'button.btn.btn-secondary.btn-lg.rounded-pill.me-4',
               { onclick: handleManualAdd },
-              '手动添加'
+              [m('i.bi.bi-plus-circle-fill.me-2'), '手动添加']
+            ),
+            m(
+              'button.btn.btn-secondary.btn-lg.rounded-pill',
+              {
+                onclick: () => pasteBibModal.show(),
+              },
+              [m('i.bi.bi-clipboard-plus-fill.me-2'), '粘贴引用']
             ),
           ]),
 
@@ -145,6 +207,7 @@ function App() {
           m('table.table.table-hover', [
             m('thead', [
               m('tr', [
+                m('th', '类型'),
                 m('th', '标题'),
                 m('th', '作者'),
                 m('th', '日期'),
@@ -160,16 +223,18 @@ function App() {
                     onclick: () => handleEdit(bib),
                   },
                   [
-                    m('td', bib.title),
                     m(
                       'td',
-                      bib.creators && bib.creators.length > 0
-                        ? bib.creators
-                            .map((c) => `${c.firstName} ${c.lastName}`)
-                            .join(', ')
-                        : ''
+                      bib.itemType
+                        ? m(
+                            'span.badge.rounded-pill.text-bg-secondary',
+                            itemNames[bib.itemType]
+                          )
+                        : '未知类型'
                     ),
-                    m('td', bib.date),
+                    m('td', bib.title || '无标题'),
+                    m('td', displayCreators(bib.creators)),
+                    m('td', bib.date || '无日期'),
                     m('td', [
                       m('button.btn.btn-close', {
                         ['aria-label']: 'Close',
@@ -183,6 +248,8 @@ function App() {
                   ]
                 );
               }),
+              bibs.length === 0 &&
+                m('tr', [m('td', { colspan: 4 }, '您还没有添加文献')]),
             ]),
           ]),
 
@@ -268,6 +335,56 @@ function App() {
               ]),
             ])
           ),
+
+          // 粘贴 BibTeX 的模态框
+          m(
+            'div.modal.fade',
+            {
+              id: 'paste-bib-modal',
+              tabindex: '-1',
+            },
+            m('div.modal-dialog', [
+              m('div.modal-content', [
+                m('div.modal-header', [
+                  m('h5.modal-title', '粘贴引用'),
+                  m('button.btn-close', {
+                    'data-bs-dismiss': 'modal',
+                    'aria-label': 'Close',
+                  }),
+                ]),
+                m('div.modal-body', [
+                  m('textarea.form-control.font-monospace', {
+                    placeholder:
+                      '支持格式：BibTeX, RIS, BibLaTeX, Zotero以及更多',
+                    rows: 10,
+                  }),
+                ]),
+                m('div.modal-footer', [
+                  m(
+                    'button.btn.btn-secondary',
+                    {
+                      'data-bs-dismiss': 'modal',
+                      'aria-label': 'Close',
+                    },
+                    '关闭'
+                  ),
+                  m(
+                    'button.btn.btn-primary',
+                    {
+                      onclick: handleBibPaste,
+                    },
+                    '添加'
+                  ),
+                ]),
+              ]),
+            ])
+          ),
+
+          m('footer.text-center.text-muted.py-4.mt-5', [
+            m('hr'),
+            m('p.mb-0', '© 2025 ShareBib. All rights reserved.'),
+            m('p', 'Made by Yachen with ❤️.'),
+          ]),
         ]),
       ]);
     },

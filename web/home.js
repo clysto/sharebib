@@ -44,12 +44,19 @@ function Home() {
             )
           ),
         ]),
+        m('div.text-center', [
+          m(
+            'button.btn.btn-primary.btn-lg.rounded-pill',
+            { onclick: handleCreateSpace },
+            [m('i.bi.bi-plus-circle-fill.me-2'), '创建新的文献列表']
+          ),
+        ]),
 
-        m(
-          'button.btn.btn-primary.btn-lg',
-          { onclick: handleCreateSpace },
-          '创建新的文献列表'
-        ),
+        m('footer.text-center.text-muted.py-4.mt-5', [
+          m('hr'),
+          m('p.mb-0', '© 2025 ShareBib. All rights reserved.'),
+          m('p', 'Made by Yachen with ❤️.'),
+        ]),
       ]),
   };
 }

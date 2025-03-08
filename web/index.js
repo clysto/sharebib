@@ -57,6 +57,21 @@ async function bibSpaceSync(id, bibs) {
   }
 }
 
+async function bibTransform(text) {
+  try {
+    const response = await fetch('/zotero/import', {
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+      method: 'POST',
+      body: text,
+    });
+    return response.json();
+  } catch (error) {
+    return [];
+  }
+}
+
 function init() {
   fetch('https://api.zotero.org/schema')
     .then((response) => {
