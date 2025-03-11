@@ -44,13 +44,8 @@ func initDB() {
 		return err
 	})
 	if err != nil {
-		log.Fatal("Failed to create bucket:", err)
+		log.Fatal(err)
 	}
-}
-
-// 关闭数据库
-func closeDB() {
-	db.Close()
 }
 
 // 存储数据到 bbolt
@@ -177,17 +172,17 @@ func getBibtex(c *gin.Context) {
 
 func main() {
 	initDB()
-	defer closeDB() // 确保程序退出时关闭数据库
+	defer db.Close()
 
 	app := gin.Default()
-	app.Use(static.Serve("/", static.EmbedFolder(embeddedFiles, "web")))
-	// app.Use(static.Serve("/", static.LocalFile("web", false)))
-	app.Any("/zotero/*path", zoteroProxy)
 
-	app.POST("/space", createSpace)
-	app.POST("/space/:id", syncSpace)
-	app.GET("/space/:id", getSpace)
-	app.GET("/bibtex/:name", getBibtex)
+	app.Use(static.Serve("/", static.EmbedFolder(embeddedFiles, "web/dist")))
+	app.Any("/api/zotero/*path", zoteroProxy)
+
+	app.POST("/api/space", createSpace)
+	app.POST("/api/space/:id", syncSpace)
+	app.GET("/api/space/:id", getSpace)
+	app.GET("/api/bibtex/:name", getBibtex)
 
 	addr := ":8080"
 	if port != "" {

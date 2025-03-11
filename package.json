@@ -1,0 +1,30 @@
+{
+  "name": "sharebib",
+  "version": "1.0.0",
+  "description": "**ShareBib** is a simple online bibliography management tool that allows multiple users to share and manage a common reference list. It provides an easy way to **search, edit, and export references** in **BibTeX format**, making it ideal for collaborative writing in research and academic projects.",
+  "main": "web/index.js",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clysto/sharebib.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/clysto/sharebib/issues"
+  },
+  "homepage": "https://github.com/clysto/sharebib#readme",
+  "devDependencies": {
+    "@types/bootstrap": "^5.2.10",
+    "@types/mithril": "^2.2.7",
+    "vite": "^6.2.1"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.11.3",
+    "mithril": "^2.2.14"
+  }
+}

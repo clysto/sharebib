@@ -2,3 +2,22 @@
   min-width: 90px;
   flex: 0;
 }
+
+.logo-text {
+  font-size: 3.6rem;
+  font-weight: 900;
+  background: linear-gradient(180deg, #fff, #ffffff4f);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+.bibs-table tbody tr {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}

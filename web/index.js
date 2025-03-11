@@ -1,76 +1,11 @@
-async function bibSearch(query) {
-  try {
-    const response = await fetch('/zotero/search', {
-      headers: {
-        'Content-Type': 'text/plain',
-      },
-      method: 'POST',
-      body: query,
-    });
-    return response.json();
-  } catch (error) {
-    return [];
-  }
-}
+import m from "mithril"
 
-async function bibSpaceFetch(id) {
-  try {
-    const response = await fetch(`/space/${id}`);
-    if (!response.ok) {
-      throw new Error('HTTP error ' + response.status);
-    }
-    return response.json();
-  } catch (error) {
-    throw error;
-  }
-}
+import App from './app.jsx';
+import Home from './home.jsx';
 
-async function bibSpaceCreate() {
-  try {
-    const response = await fetch('/space', {
-      method: 'POST',
-    });
-    if (!response.ok) {
-      throw new Error('HTTP error ' + response.status);
-    }
-    return response.json();
-  } catch (error) {
-    throw error;
-  }
-}
-
-async function bibSpaceSync(id, bibs) {
-  try {
-    const response = await fetch(`/space/${id}`, {
-      headers: {
-        'Content-Type': 'text/plain',
-      },
-      method: 'POST',
-      body: JSON.stringify(bibs),
-    });
-    if (!response.ok) {
-      throw new Error('HTTP error ' + response.status);
-    }
-    return response.json();
-  } catch (error) {
-    throw error;
-  }
-}
-
-async function bibTransform(text) {
-  try {
-    const response = await fetch('/zotero/import', {
-      headers: {
-        'Content-Type': 'text/plain',
-      },
-      method: 'POST',
-      body: text,
-    });
-    return response.json();
-  } catch (error) {
-    return [];
-  }
-}
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap-icons/font/bootstrap-icons.min.css';
+import "./style.css"
 
 function init() {
   fetch('https://api.zotero.org/schema')
@@ -84,7 +19,7 @@ function init() {
       window.zoteroSchema = data;
       const root = document.body;
       m.route(root, '/', {
-        '/': Home,
+        '/':  Home,
         '/:id': App,
       });
     })
