@@ -9,6 +9,7 @@ import {
   bibTransform,
   addVisitHistory,
 } from './utils.js';
+import { buildCiteKey } from './citation-key.js';
 
 export default function App() {
   let editItem = null;
@@ -55,7 +56,13 @@ export default function App() {
         m.redraw();
         return;
       }
-      bibs.push(result[0]);
+      const allKeys = Object.fromEntries(
+        bibs.map((b) => [b.citationKey, true])
+      );
+      bibs.push({
+        citationKey: buildCiteKey(result[0], null, allKeys),
+        ...result[0],
+      });
       handleBibsChange();
       m.redraw();
       return;
@@ -73,7 +80,15 @@ export default function App() {
     if (!text) return;
 
     bibTransform(text).then((result) => {
-      bibs.push(...result);
+      const allKeys = Object.fromEntries(
+        bibs.map((b) => [b.citationKey, true])
+      );
+      for (const bib of result) {
+        bibs.push({
+          citationKey: buildCiteKey(bib, null, allKeys),
+          ...bib,
+        });
+      }
       handleBibsChange();
       textarea.value = '';
       pasteBibModal.hide();
@@ -109,13 +124,15 @@ export default function App() {
   };
 
   const handleBibSelect = (index) => {
-    if (selectedBibs.length === 1 && selectedBibs.includes(index)) {
-      handleEdit(bibs[index]);
-    }
     if (multipleSelect) {
-      selectedBibs.push(index);
+      if (selectedBibs.includes(index)) {
+        selectedBibs = selectedBibs.filter((i) => i !== index);
+      } else {
+        selectedBibs.push(index);
+      }
     } else {
-      selectedBibs = [index];
+      selectedBibs = [];
+      handleEdit(bibs[index]);
     }
     m.redraw();
   };
@@ -129,8 +146,26 @@ export default function App() {
     }
   };
 
-  const handleKeyUp = (e) => {
+  const handleKeyUp = () => {
     multipleSelect = false;
+  };
+
+  const handleWindowClick = (e) => {
+    if (!e.target.closest('.bibs-table')) {
+      selectedBibs = [];
+      m.redraw();
+    }
+  };
+
+  const handleCopyCitationKeys = () => {
+    const keys = bibs
+      .filter((_, index) => selectedBibs.includes(index))
+      .map((b) => b.citationKey)
+      .join(', ');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(keys);
+    }
+    selectedBibs = [];
   };
 
   return {
@@ -145,6 +180,7 @@ export default function App() {
       searchInput = document.querySelector('#search-input');
       window.addEventListener('keydown', handleKeyDown);
       window.addEventListener('keyup', handleKeyUp);
+      document.addEventListener('click', handleWindowClick);
     },
     onremove: () => {
       document.body.classList.remove('modal-open');
@@ -155,6 +191,7 @@ export default function App() {
       pasteBibModal.dispose();
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('click', handleWindowClick);
     },
     view: () => {
       const zoteroSchema = window.zoteroSchema;
@@ -211,11 +248,11 @@ export default function App() {
                   class="form-control font-monospace"
                   readonly
                   hidden
-                  value={`${protocol}//${url}/bibtex/${id}.bib`}
+                  value={`${protocol}//${url}/api/bibtex/${id}.bib`}
                 />
                 <a
                   class="btn btn-secondary"
-                  href={`/bibtex/${id}.bib`}
+                  href={`/api/bibtex/${id}.bib`}
                   download={`${id}.bib`}
                 >
                   <i class="bi bi-download"></i>
@@ -223,11 +260,11 @@ export default function App() {
               </div>
               <button
                 id="copy-btn"
-                class="btn btn-secondary"
+                class="btn btn-secondary me-2"
                 onclick={() => {
                   if (navigator.clipboard) {
                     navigator.clipboard.writeText(
-                      `${protocol}//${url}/bibtex/${id}.bib`
+                      `${protocol}//${url}/api/bibtex/${id}.bib`
                     );
                     copySuccessPopover.show();
                     setTimeout(() => {
@@ -238,6 +275,18 @@ export default function App() {
               >
                 <i class="bi bi-copy me-2"></i>复制 BibTeX 链接
               </button>
+              {selectedBibs.length > 0 ? (
+                <button
+                  id="copy-btn"
+                  class="btn btn-primary"
+                  onclick={() => handleCopyCitationKeys()}
+                >
+                  <i class="bi bi-copy me-2"></i>复制 Citation Keys
+                </button>
+              ) : <button class="btn text-muted" disabled >
+                按住 Ctrl 或 Command 键进行多选
+              </button>
+            }
             </div>
 
             <div class="text-center mb-2">
@@ -269,7 +318,6 @@ export default function App() {
                 {bibs.map((bib, index) => (
                   <tr
                     key={index}
-                    ondblclick={() => handleEdit(bib)}
                     onclick={() => handleBibSelect(index)}
                     class={selectedBibs.includes(index) ? 'table-primary' : ''}
                   >

@@ -7,14 +7,15 @@ export default function BibEditor(vnode) {
   let itemSchema = null;
 
   const handleChange = () => {
-    const inputs = dom.dom.querySelectorAll('.form-control');
+    const inputs = dom.querySelectorAll('.form-control');
     bib.creators = [];
     inputs.forEach((input) => {
+      console.log(input.name);
       if (!input.name.startsWith('creator')) {
         bib[input.name] = input.value;
       }
     });
-    const creatorInputs = dom.dom.querySelectorAll('.creator');
+    const creatorInputs = dom.querySelectorAll('.creator');
     creatorInputs.forEach((input) => {
       const creatorType = input.querySelector('select').value;
       const firstName = input.querySelector('input[name=creator-firstname]');
@@ -127,6 +128,18 @@ export default function BibEditor(vnode) {
                 value={bib['title']}
                 onchange={handleChange}
                 name="title"
+              />
+            </div>
+
+            <div class="input-group mb-2">
+              <span class="input-group-text" style={{ minWidth: '90px' }}>
+                引用键名
+              </span>
+              <input
+                class="form-control"
+                value={bib['citationKey']}
+                onchange={handleChange}
+                name="citationKey"
               />
             </div>
 
