@@ -71,3 +71,25 @@ export async function bibSpaceSync(id, bibs) {
     throw error;
   }
 }
+
+export function addVisitHistory(id) {
+  let history;
+  try {
+    history = JSON.parse(localStorage.getItem('history'));
+    if (!Array.isArray(history)) {
+      history = [];
+    }
+  } catch (e) {
+    history = [];
+  }
+  let isVisited = false;
+  history.forEach((h) => {
+    if (h.id === id) {
+      isVisited = true;
+    }
+  });
+  if (!isVisited) {
+    history.push({ id, name: '未命名', createdTime: Date.now() });
+  }
+  localStorage.setItem('history', JSON.stringify(history));
+}

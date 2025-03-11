@@ -1,3 +1,11 @@
+body {
+  overflow-y: scroll;
+}
+
+.container {
+  min-width: 768px;
+}
+
 .bib-editor .creator select {
   min-width: 90px;
   flex: 0;
@@ -13,11 +21,20 @@
   margin-top: 0;
   margin-bottom: 0.5rem;
   line-height: 1.2;
+  text-decoration: none;
 }
 
 .bibs-table tbody tr {
   cursor: pointer;
+}
+
+.bibs-table tr {
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
+}
+
+.table-primary .btn-close {
+  color: #004085;
+  filter: none;
 }

@@ -1,12 +1,13 @@
 import m from 'mithril';
 import { Link } from 'mithril/route.js';
-import { Modal } from 'bootstrap';
+import { Modal, Popover } from 'bootstrap';
 import BibEditor from './editor.jsx';
 import {
   bibSearch,
   bibSpaceFetch,
   bibSpaceSync,
   bibTransform,
+  addVisitHistory,
 } from './utils.js';
 
 export default function App() {
@@ -15,9 +16,12 @@ export default function App() {
   let searching = false;
   let searchResults = []; // 存储搜索结果
   let bibs = [];
+  let selectedBibs = [];
   let searchModal = null;
   let editorModal = null;
   let pasteBibModal = null;
+  let multipleSelect = false;
+  let copySuccessPopover = null;
 
   const id = m.route.param('id');
 
@@ -25,16 +29,7 @@ export default function App() {
   bibSpaceFetch(id)
     .then((data) => {
       bibs = data.bibs;
-      const history = localStorage.getItem('history');
-      if (history) {
-        const parsedHistory = JSON.parse(history);
-        if (!parsedHistory.includes(id)) {
-          parsedHistory.push(id);
-        }
-        localStorage.setItem('history', JSON.stringify(parsedHistory));
-      } else {
-        localStorage.setItem('history', JSON.stringify([id]));
-      }
+      addVisitHistory(id);
       m.redraw();
     })
     .catch(() => {
@@ -113,19 +108,53 @@ export default function App() {
     }${creators.length > 1 ? ' 等' : ''}`;
   };
 
+  const handleBibSelect = (index) => {
+    if (selectedBibs.length === 1 && selectedBibs.includes(index)) {
+      handleEdit(bibs[index]);
+    }
+    if (multipleSelect) {
+      selectedBibs.push(index);
+    } else {
+      selectedBibs = [index];
+    }
+    m.redraw();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Control' || e.key === 'Meta') {
+      multipleSelect = true;
+    } else if (e.key === 'Escape') {
+      selectedBibs = [];
+      m.redraw();
+    }
+  };
+
+  const handleKeyUp = (e) => {
+    multipleSelect = false;
+  };
+
   return {
     oncreate: () => {
       searchModal = new Modal('#search-modal');
       editorModal = new Modal('#edit-modal');
       pasteBibModal = new Modal('#paste-bib-modal');
+      copySuccessPopover = new Popover('#copy-btn', {
+        content: '复制成功',
+        trigger: 'manual',
+      });
       searchInput = document.querySelector('#search-input');
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
     },
     onremove: () => {
       document.body.classList.remove('modal-open');
       document.body.style = '';
       searchModal.dispose();
+      copySuccessPopover.dispose();
       editorModal.dispose();
       pasteBibModal.dispose();
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     },
     view: () => {
       const zoteroSchema = window.zoteroSchema;
@@ -160,7 +189,13 @@ export default function App() {
                 disabled={searching}
               >
                 {searching ? (
-                  '搜索中...'
+                  <>
+                    <span
+                      class="spinner-grow spinner-grow-sm me-2"
+                      aria-hidden="true"
+                    ></span>
+                    搜索中...
+                  </>
                 ) : (
                   <>
                     <i class="bi bi-search me-2"></i>引用
@@ -187,12 +222,19 @@ export default function App() {
                 </a>
               </div>
               <button
+                id="copy-btn"
                 class="btn btn-secondary"
-                onclick={() =>
-                  navigator.clipboard.writeText(
-                    `${protocol}//${url}/bibtex/${id}.bib`
-                  )
-                }
+                onclick={() => {
+                  if (navigator.clipboard) {
+                    navigator.clipboard.writeText(
+                      `${protocol}//${url}/bibtex/${id}.bib`
+                    );
+                    copySuccessPopover.show();
+                    setTimeout(() => {
+                      copySuccessPopover.hide();
+                    }, 800);
+                  }
+                }}
               >
                 <i class="bi bi-copy me-2"></i>复制 BibTeX 链接
               </button>
@@ -224,10 +266,12 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {bibs.map((bib) => (
+                {bibs.map((bib, index) => (
                   <tr
-                    key={bib ? bib.title : Math.random()}
-                    onclick={() => handleEdit(bib)}
+                    key={index}
+                    ondblclick={() => handleEdit(bib)}
+                    onclick={() => handleBibSelect(index)}
+                    class={selectedBibs.includes(index) ? 'table-primary' : ''}
                   >
                     <td>
                       {bib.itemType ? (
@@ -285,7 +329,7 @@ export default function App() {
                 <div class="modal-body">
                   {searchResults.length === 0 ? (
                     <p class="text-muted">
-                      没有找到相关文献，请检查输入是否正确
+                      没有找到相关文献，请尝试其他关键词。
                     </p>
                   ) : (
                     <ul class="list-group">

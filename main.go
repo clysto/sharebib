@@ -14,7 +14,7 @@ import (
 
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	gonanoid "github.com/matoous/go-nanoid/v2"
 	"go.etcd.io/bbolt"
 )
 
@@ -95,7 +95,11 @@ func zoteroProxy(c *gin.Context) {
 
 // 创建文献空间
 func createSpace(c *gin.Context) {
-	id := uuid.New().String()
+	id, err := gonanoid.Generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 12)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "failed to generate id"})
+		return
+	}
 	_ = set(id, "[]") // 存入 bbolt
 
 	c.JSON(200, gin.H{

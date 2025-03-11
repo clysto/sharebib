@@ -119,7 +119,7 @@ export default function BibEditor(vnode) {
             </div>
 
             <div class="input-group mb-2">
-              <span class="input-group-text">
+              <span class="input-group-text" style={{ minWidth: '90px' }}>
                 {locales.fields['title'] || 'title'}
               </span>
               <input
@@ -211,7 +211,7 @@ export default function BibEditor(vnode) {
               .filter((field) => field.field !== 'title')
               .map((field) => (
                 <div class="input-group mb-2" key={field.field}>
-                  <span class="input-group-text">
+                  <span class="input-group-text" style={{ minWidth: '90px' }}>
                     {locales.fields[field.field] || field.field}
                   </span>
                   {field.field === 'abstractNote' ? (
